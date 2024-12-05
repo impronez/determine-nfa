@@ -6,8 +6,8 @@
 
 #include "Transition.h"
 
-using Transitions = std::map<std::string, std::map<std::string, Transition>>; // [state][input][transition]
-using TransitionTable = std::map<std::set<std::string>, std::map<std::string, std::set<std::string>>>; // [states][input][nextStates]
+using Transitions = std::map<std::string, std::map<std::string, Transition> >; // [state][input][transition]
+using TransitionTable = std::map<std::set<std::string>, std::map<std::string, std::set<std::string> > >;// [states][input][nextStates]
 
 constexpr std::string E_CLOSE = "ε";
 
@@ -15,20 +15,20 @@ class MooreAutomata
 {
 public:
     MooreAutomata(
-        std::set<std::string>& inputs,
-        std::set<std::string>& states,
-        Transitions& transitions,
-        std::string& startState,
-        std::string& finalState
+        std::set<std::string> &inputs,
+        std::set<std::string> &states,
+        Transitions &transitions,
+        std::string &startState,
+        std::string &finalState
     )
         : m_inputs(std::move(inputs)),
-        m_states(std::move(states)),
-        m_transitions(std::move(transitions)),
-        m_startState(std::move(startState)),
-        m_finalStates({ std::move(finalState) })
+          m_states(std::move(states)),
+          m_transitions(std::move(transitions)),
+          m_startState(std::move(startState)),
+          m_finalStates({std::move(finalState)})
     {}
 
-    void ExportToFile(const std::string& filename)
+    void ExportToFile(const std::string &filename)
     {
         std::ofstream file(filename);
         if (!file.is_open())
@@ -39,7 +39,7 @@ public:
         std::string outputs = ";";
         std::string states = ";";
 
-        for (int i = 1; auto& state: m_states)
+        for (int i = 1; auto &state: m_states)
         {
             states += state;
 
@@ -58,10 +58,10 @@ public:
         file << outputs << std::endl;
         file << states << std::endl;
 
-        for (auto& input: m_inputs)
+        for (auto &input: m_inputs)
         {
             file << input << ";";
-            for (int i = 1; auto& state: m_states)
+            for (int i = 1; auto &state: m_states)
             {
                 if (m_transitions.contains(state) &&
                     m_transitions[state].contains(input))
@@ -72,8 +72,7 @@ public:
                     {
                         file << ";";
                     }
-                }
-                else if (i != m_states.size())
+                } else if (i != m_states.size())
                 {
                     file << ";";
                 }
@@ -98,14 +97,14 @@ public:
         auto startState = std::set<std::string>();
         auto transitionTable = GetStartTransitionTable(startState, transitiveClosures);
 
-        for (auto& it: transitionTable)
+        for (auto &it: transitionTable)
         {
             std::map<std::string, std::set<std::string>> nextStates;
-            for (auto& input: inputs)
+            for (auto &input: inputs)
             {
-                for (auto& sourceState: it.first)
+                for (auto &sourceState: it.first)
                 {
-                    for (auto& transitiveState: transitiveClosures.at(sourceState))
+                    for (auto &transitiveState: transitiveClosures.at(sourceState))
                     {
                         if (AreThereStateTransitions(transitiveState, input))
                         {
@@ -114,7 +113,7 @@ public:
                                 nextStates.emplace(input, std::set<std::string>());
                             }
 
-                            for (auto& nextState: m_transitions.at(transitiveState).at(input).GetStates())
+                            for (auto &nextState: m_transitions.at(transitiveState).at(input).GetStates())
                             {
                                 nextStates[input].insert(nextState);
                             }
@@ -123,13 +122,15 @@ public:
                 }
             }
 
+            AddStatesFromTransitiveClosures(transitiveClosures, nextStates);
+
             it.second = nextStates;
 
-            for (auto& row: nextStates)
+            for (auto &row: nextStates)
             {
                 if (!transitionTable.contains(row.second))
                 {
-                    transitionTable.emplace(row.second, std::map<std::string, std::set<std::string>>());
+                    transitionTable.emplace(row.second, std::map<std::string, std::set<std::string> >());
                 }
             }
         }
@@ -138,20 +139,41 @@ public:
     }
 
 private:
-    void SetNewStatesAndTransitions(TransitionTable& table, std::set<std::string>& startState,
-        std::set<std::string>& inputs)
+    static void AddStatesFromTransitiveClosures(std::map<std::string, std::set<std::string>>& transitiveClosures,
+        std::map<std::string, std::set<std::string>>& nextStates)
+    {
+        for (auto& it: nextStates)
+        {
+            for (auto& nextState: it.second)
+            {
+                if (transitiveClosures.at(nextState).size() > 1)
+                {
+                    for (auto& state: transitiveClosures.at(nextState))
+                    {
+                        if (!it.second.contains(state))
+                        {
+                            it.second.insert(state);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    void SetNewStatesAndTransitions(TransitionTable &table, std::set<std::string> &startState,
+                                    std::set<std::string> &inputs)
     {
         auto newStateNames = GetNewStateNames(table, startState);
         auto newStates = GetNewStates(newStateNames);
         std::string newStartState = newStateNames[startState];
 
         Transitions transitions;
-        for (auto& it: table)
+        for (auto &it: table)
         {
             std::string newState = newStateNames[it.first];
             transitions.emplace(newState, std::map<std::string, Transition>());
 
-            for (auto& transition: it.second)
+            for (auto &transition: it.second)
             {
                 std::string nextState = newStateNames[transition.second];
 
@@ -168,12 +190,12 @@ private:
         m_inputs = inputs;
     }
 
-    std::set<std::string> GetFinalStates(std::map<std::set<std::string>, std::string>& newStateNames)
+    std::set<std::string> GetFinalStates(std::map<std::set<std::string>, std::string> &newStateNames)
     {
         std::set<std::string> finalStates;
-        for (auto& it: newStateNames)
+        for (auto &it: newStateNames)
         {
-            for (auto& state: it.first)
+            for (auto &state: it.first)
             {
                 if (IsFinalState(state))
                 {
@@ -186,15 +208,15 @@ private:
         return finalStates;
     }
 
-    [[nodiscard]] bool IsFinalState(const std::string& state) const
+    [[nodiscard]] bool IsFinalState(const std::string &state) const
     {
         return m_finalStates.contains(state);
     }
 
-    static std::set<std::string> GetNewStates(std::map<std::set<std::string>, std::string>& stateNames)
+    static std::set<std::string> GetNewStates(std::map<std::set<std::string>, std::string> &stateNames)
     {
         std::set<std::string> newStates;
-        for (auto& it: stateNames)
+        for (auto &it: stateNames)
         {
             newStates.emplace(it.second);
         }
@@ -203,19 +225,18 @@ private:
     }
 
     static std::map<std::set<std::string>, std::string> GetNewStateNames(
-        const TransitionTable& table, const std::set<std::string>& startState)
+        const TransitionTable &table, const std::set<std::string> &startState)
     {
         std::map<std::set<std::string>, std::string> newStates;
         unsigned index = 1;
 
-        for (auto& it: table)
+        for (auto &it: table)
         {
             std::string newState;
             if (it.first == startState)
             {
                 newState = NEW_STATE_CHAR + std::to_string(0);
-            }
-            else
+            } else
             {
                 newState = NEW_STATE_CHAR + std::to_string(index++);
             }
@@ -226,23 +247,24 @@ private:
         return newStates;
     }
 
-    [[nodiscard]] bool AreThereStateTransitions(const std::string& state, const std::string& input) const
+    [[nodiscard]] bool AreThereStateTransitions(const std::string &state, const std::string &input) const
     {
         return m_transitions.contains(state) && m_transitions.at(state).contains(input);
     }
 
-    [[nodiscard]] TransitionTable GetStartTransitionTable(std::set<std::string>& startState,
-        const std::map<std::string, std::set<std::string>>& transitiveClosures) const
+    [[nodiscard]] TransitionTable GetStartTransitionTable(std::set<std::string> &startState,
+                                                          const std::map<std::string, std::set<std::string> > &
+                                                          transitiveClosures) const
     // [states] -> [input] -> [nextStates]
     {
         TransitionTable table;
 
-        for (auto& state: transitiveClosures.at(m_startState))
+        for (auto &state: transitiveClosures.at(m_startState))
         {
             startState.insert(state);
         }
 
-        table.emplace(startState, std::map<std::string, std::set<std::string>>());
+        table.emplace(startState, std::map<std::string, std::set<std::string> >());
 
         return table;
     }
@@ -257,11 +279,12 @@ private:
         return inputs;
     }
 
-    [[nodiscard]] std::map<std::string, std::set<std::string>> GetTransitiveClosures() const // state -> e-close transition states
+    [[nodiscard]] std::map<std::string, std::set<std::string>> GetTransitiveClosures() const
+    // state -> e-close transition states
     {
-        std::map<std::string, std::set<std::string>> transitiveClosures;
+        std::map<std::string, std::set<std::string> > transitiveClosures;
 
-        for (auto& state: m_states)
+        for (auto &state: m_states)
         {
             transitiveClosures.emplace(state, std::set<std::string>());
             transitiveClosures.at(state).emplace(state);
@@ -269,7 +292,7 @@ private:
             if (m_transitions.contains(state) &&
                 m_transitions.at(state).contains(E_CLOSE))
             {
-                for (auto& nextState: m_transitions.at(state).at(E_CLOSE).GetStates())
+                for (auto &nextState: m_transitions.at(state).at(E_CLOSE).GetStates())
                 {
                     transitiveClosures[state].emplace(nextState);
                 }
