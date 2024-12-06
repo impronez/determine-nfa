@@ -87,11 +87,6 @@ public:
 
     void Determine()
     {
-        if (!m_inputs.contains(E_CLOSE))
-        {
-            return;
-        }
-
         auto transitiveClosures = GetTransitiveClosures();
         auto inputs = GetNonEmptyInputs();
 
