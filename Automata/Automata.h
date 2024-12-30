@@ -299,7 +299,17 @@ private:
             {
                 for (auto &nextState: m_transitions.at(state).at(E_CLOSE).GetStates())
                 {
-                    transitiveClosures[state].emplace(nextState);
+                    if (transitiveClosures.contains(nextState))
+                    {
+                        for (auto& stateFromEmptyTransition: transitiveClosures.at(nextState))
+                        {
+                            transitiveClosures[state].emplace(stateFromEmptyTransition);
+                        }
+                    }
+                    else
+                    {
+                        transitiveClosures[state].emplace(nextState);
+                    }
                 }
             }
         }
